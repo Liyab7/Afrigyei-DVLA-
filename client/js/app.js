@@ -856,6 +856,36 @@ async function loadReminders() {
   }
 }
 
+function exportRemindersToCSV() {
+  const table = document.getElementById('reminderTable');
+  const rows = table.querySelectorAll('tbody tr');
+  if (rows.length === 0) {
+    showToast('No contacts to export', 'error');
+    return;
+  }
+  const headers = ['Customer', 'Vehicle Number', 'Telephone', 'Expiry Date'];
+  const csvRows = [headers.join(',')];
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    const rowData = [
+      '"' + cells[0].textContent.replace(/"/g, '""') + '"',
+      '"' + cells[1].textContent.replace(/"/g, '""') + '"',
+      '"' + cells[2].textContent.replace(/"/g, '""') + '"',
+      '"' + cells[3].textContent.replace(/"/g, '""') + '"'
+    ];
+    csvRows.push(rowData.join(','));
+  });
+  const csvContent = csvRows.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'expiry_reminders_' + new Date().toISOString().slice(0, 10) + '.csv';
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast('Contacts exported to CSV', 'success');
+}
+
 function sendReminder(phone, customer, vehicle, expiry) {
   const cleanPhone = phone.replace('+', '');
   const message = `Dear ${customer}, this is a reminder from *Afrigyei Testing Station (AWOSHIE DVLA)*.
