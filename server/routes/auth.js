@@ -24,10 +24,10 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Username already exists.' });
     }
 
-    const user = new User({ username: username.trim(), password });
+    const user = new User({ username: username.trim(), password, isApproved: false });
     await user.save();
 
-    res.status(201).json({ message: 'Registration successful!' });
+    res.status(201).json({ message: 'Registration successful! Your account is pending admin approval.' });
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ message: 'Server error during registration.' });
@@ -51,6 +51,10 @@ router.post('/login', async (req, res) => {
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid username or PIN.' });
+    }
+
+    if (!user.isApproved && user.role !== 'admin') {
+      return res.status(403).json({ message: 'Your account is pending admin approval. Please wait for the admin to approve your access.' });
     }
 
     const token = jwt.sign(

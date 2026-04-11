@@ -258,7 +258,7 @@ async function handleRegister() {
       body: JSON.stringify({ username, password })
     });
 
-    showToast('Registration successful! Please login.', 'success');
+    showToast('Registration successful! Your account is pending admin approval.', 'success');
     showLogin();
     document.getElementById('regUsername').value = '';
     document.getElementById('regPassword').value = '';
@@ -844,8 +844,8 @@ async function loadReminders() {
         <td>${escapeHtml(r.telephoneNumber)}</td>
         <td>${r.expiryDate}</td>
         <td>
-          <button class="btn btn-sm btn-success" onclick="sendReminder('${r.telephoneNumber}', '${escapeHtml(r.customerName)}', '${escapeHtml(r.vehicleNumber)}', '${r.expiryDate}')">
-            <i class="fab fa-whatsapp"></i> Send
+          <button class="btn btn-sm btn-whatsapp" onclick="sendReminder('${r.telephoneNumber}', '${escapeHtml(r.customerName)}', '${escapeHtml(r.vehicleNumber)}', '${r.expiryDate}')">
+            <i class="fab fa-whatsapp"></i> Send via WhatsApp
           </button>
         </td>
       `;
@@ -857,9 +857,18 @@ async function loadReminders() {
 }
 
 function sendReminder(phone, customer, vehicle, expiry) {
-  const message = `Dear ${customer}, your vehicle ${vehicle} Roadworthy is due to expire on ${expiry}. Please visit Afrigyei Testing Station (AWOSHIE DVLA) to renew.`;
+  const cleanPhone = phone.replace('+', '');
+  const message = `Dear ${customer}, this is a reminder from *Afrigyei Testing Station (AWOSHIE DVLA)*.
+
+Your vehicle *${vehicle}* roadworthy certificate is due to expire on *${expiry}*.
+
+Please visit us to renew your certificate before the expiry date to avoid any inconvenience.
+
+Thank you for choosing Afrigyei Testing Station.`;
+
   const encoded = encodeURIComponent(message);
-  window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
+  window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
+  showToast(`WhatsApp reminder opened for ${customer}`, 'success');
 }
 
 // ============================================

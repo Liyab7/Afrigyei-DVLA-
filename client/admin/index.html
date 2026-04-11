@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Afrigyei Testing Station</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+  <!-- ==================== ADMIN LOGIN ==================== -->
+  <div id="adminLoginScreen" class="admin-login-screen">
+    <div class="admin-login-particles" id="adminParticles"></div>
+    <div class="admin-login-wrapper">
+      <div class="admin-login-card">
+        <div class="admin-login-icon">
+          <i class="fas fa-shield-halved"></i>
+        </div>
+        <h2>Admin Panel</h2>
+        <p class="admin-login-subtitle">Afrigyei Testing Station</p>
+        <div class="admin-input-field">
+          <i class="fas fa-user-shield"></i>
+          <input type="text" id="adminUsername" placeholder="Admin Username" required>
+        </div>
+        <div class="admin-input-field">
+          <i class="fas fa-lock"></i>
+          <input type="password" id="adminPassword" placeholder="Admin PIN" maxlength="4" inputmode="numeric" pattern="\d{4}" required>
+        </div>
+        <button class="admin-btn admin-btn-primary admin-btn-block" id="adminLoginBtn" onclick="handleAdminLogin()">
+          <i class="fas fa-arrow-right-to-bracket"></i>
+          <span>Sign In to Admin</span>
+        </button>
+        <div class="admin-login-footer">
+          <a href="/" class="admin-back-link"><i class="fas fa-arrow-left"></i> Back to Main App</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ADMIN DASHBOARD ==================== -->
+  <div id="adminDashboard" class="admin-dashboard hidden">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="admin-sidebar-header">
+        <div class="admin-sidebar-brand">
+          <i class="fas fa-shield-halved"></i>
+          <span>Admin Panel</span>
+        </div>
+      </div>
+      <nav class="admin-sidebar-nav">
+        <a href="#" class="admin-nav-item active" data-section="overview" onclick="switchAdminSection('overview')">
+          <i class="fas fa-chart-pie"></i><span>Overview</span>
+        </a>
+        <a href="#" class="admin-nav-item" data-section="pending" onclick="switchAdminSection('pending')">
+          <i class="fas fa-user-clock"></i><span>Pending Users</span>
+          <span class="admin-badge" id="pendingBadge">0</span>
+        </a>
+        <a href="#" class="admin-nav-item" data-section="users" onclick="switchAdminSection('users')">
+          <i class="fas fa-users"></i><span>All Users</span>
+        </a>
+        <a href="#" class="admin-nav-item" data-section="expiring" onclick="switchAdminSection('expiring')">
+          <i class="fas fa-bell"></i><span>Expiring Licenses</span>
+        </a>
+      </nav>
+      <div class="admin-sidebar-footer">
+        <div class="admin-user-info">
+          <i class="fas fa-user-shield"></i>
+          <span id="adminSidebarUser">Admin</span>
+        </div>
+        <button class="admin-btn admin-btn-danger admin-btn-sm" onclick="handleAdminLogout()">
+          <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <button class="admin-menu-toggle" onclick="toggleAdminSidebar()">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h2 id="adminPageTitle">Overview</h2>
+        <div class="admin-topbar-right">
+          <span class="admin-user-display">
+            <i class="fas fa-user-shield"></i>
+            <span id="adminTopbarUser">Admin</span>
+          </span>
+        </div>
+      </header>
+
+      <!-- Overview Section -->
+      <section id="admin-section-overview" class="admin-content-section active">
+        <div class="admin-stats-grid">
+          <div class="admin-stat-card admin-stat-purple">
+            <div class="admin-stat-icon"><i class="fas fa-users"></i></div>
+            <div class="admin-stat-info">
+              <h3 id="statTotalUsers">0</h3>
+              <p>Total Users</p>
+            </div>
+          </div>
+          <div class="admin-stat-card admin-stat-orange">
+            <div class="admin-stat-icon"><i class="fas fa-user-clock"></i></div>
+            <div class="admin-stat-info">
+              <h3 id="statPendingUsers">0</h3>
+              <p>Pending Approval</p>
+            </div>
+          </div>
+          <div class="admin-stat-card admin-stat-green">
+            <div class="admin-stat-icon"><i class="fas fa-user-check"></i></div>
+            <div class="admin-stat-info">
+              <h3 id="statApprovedUsers">0</h3>
+              <p>Approved Users</p>
+            </div>
+          </div>
+          <div class="admin-stat-card admin-stat-blue">
+            <div class="admin-stat-icon"><i class="fas fa-car"></i></div>
+            <div class="admin-stat-info">
+              <h3 id="statTotalRecords">0</h3>
+              <p>Total Records</p>
+            </div>
+          </div>
+          <div class="admin-stat-card admin-stat-cyan">
+            <div class="admin-stat-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="admin-stat-info">
+              <h3 id="statActiveRecords">0</h3>
+              <p>Active Records</p>
+            </div>
+          </div>
+          <div class="admin-stat-card admin-stat-red">
+            <div class="admin-stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="admin-stat-info">
+              <h3 id="statExpiringRecords">0</h3>
+              <p>Expiring Soon</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+          </div>
+          <div class="admin-card-body">
+            <div class="admin-quick-actions">
+              <button class="admin-action-btn" onclick="switchAdminSection('pending')">
+                <i class="fas fa-user-clock"></i>
+                <span>Review Pending Users</span>
+              </button>
+              <button class="admin-action-btn" onclick="switchAdminSection('expiring')">
+                <i class="fas fa-bell"></i>
+                <span>Check Expiring Licenses</span>
+              </button>
+              <button class="admin-action-btn" onclick="switchAdminSection('users')">
+                <i class="fas fa-users-cog"></i>
+                <span>Manage Users</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pending Users Section -->
+      <section id="admin-section-pending" class="admin-content-section">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3><i class="fas fa-user-clock"></i> Pending User Approvals</h3>
+          </div>
+          <div class="admin-card-body">
+            <div class="admin-table-responsive">
+              <table class="admin-data-table" id="pendingUsersTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Username</th>
+                    <th>Registered</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div id="noPendingUsers" class="admin-empty-state hidden">
+              <i class="fas fa-check-circle"></i>
+              <p>No pending users. All caught up!</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- All Users Section -->
+      <section id="admin-section-users" class="admin-content-section">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3><i class="fas fa-users"></i> All Users</h3>
+          </div>
+          <div class="admin-card-body">
+            <div class="admin-table-responsive">
+              <table class="admin-data-table" id="allUsersTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Username</th>
+                    <th>Status</th>
+                    <th>Registered</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div id="noUsers" class="admin-empty-state hidden">
+              <i class="fas fa-users-slash"></i>
+              <p>No users registered yet</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Expiring Licenses Section -->
+      <section id="admin-section-expiring" class="admin-content-section">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3><i class="fas fa-bell"></i> Expiring Licenses</h3>
+            <div class="admin-card-actions">
+              <select id="expiryDaysFilter" onchange="loadExpiringRecords()" class="admin-select">
+                <option value="7">Next 7 Days</option>
+                <option value="14">Next 14 Days</option>
+                <option value="30">Next 30 Days</option>
+                <option value="60">Next 60 Days</option>
+              </select>
+            </div>
+          </div>
+          <div class="admin-card-body">
+            <div class="admin-table-responsive">
+              <table class="admin-data-table" id="expiringTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Customer</th>
+                    <th>Vehicle</th>
+                    <th>Vehicle No.</th>
+                    <th>Telephone</th>
+                    <th>Expiry Date</th>
+                    <th>Days Left</th>
+                    <th>Reminder</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div id="noExpiring" class="admin-empty-state hidden">
+              <i class="fas fa-check-circle"></i>
+              <p>No licenses expiring in this period</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="adminToastContainer" class="admin-toast-container"></div>
+
+  <!-- Confirm Dialog -->
+  <div id="adminConfirmDialog" class="admin-modal-overlay hidden">
+    <div class="admin-modal-card">
+      <h3 id="adminConfirmTitle">Confirm Action</h3>
+      <p id="adminConfirmMessage">Are you sure?</p>
+      <div class="admin-modal-actions">
+        <button class="admin-btn admin-btn-secondary" onclick="closeAdminConfirm()">Cancel</button>
+        <button class="admin-btn admin-btn-danger" id="adminConfirmBtn" onclick="adminConfirmAction()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>
