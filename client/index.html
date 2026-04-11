@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Afrigyei Testing Station - Vehicle Inspection</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
+</head>
+<body>
+
+  <!-- ==================== AUTH SCREEN ==================== -->
+  <div id="authScreen" class="auth-screen">
+    <div id="particles-js"></div>
+    <div class="auth-wrapper">
+      <!-- Login Form -->
+      <div class="auth-card" id="loginForm">
+        <div class="auth-logo-wrap">
+          <img src="assets/logo.png" alt="Logo" class="auth-logo" onerror="this.style.display='none'">
+        </div>
+        <h2><i class="fas fa-shield-halved"></i> Welcome Back</h2>
+        <p class="auth-subtitle">Sign in to your account</p>
+        <div class="input-field">
+          <i class="fas fa-user"></i>
+          <input type="text" id="loginUsername" placeholder="Username" required>
+        </div>
+        <div class="input-field">
+          <i class="fas fa-lock"></i>
+          <input type="password" id="loginPassword" placeholder="4-Digit PIN" maxlength="4" inputmode="numeric" pattern="\d{4}" required>
+        </div>
+        <button class="btn btn-primary btn-block" id="loginBtn" onclick="handleLogin()">
+          <span>Sign In</span>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+        <div class="auth-links">
+          <a href="#" onclick="showRegister(); return false;">Create an Account</a>
+          <a href="#" onclick="forgotCredentials(); return false;">Forgot Credentials?</a>
+        </div>
+      </div>
+
+      <!-- Register Form -->
+      <div class="auth-card hidden" id="registerForm">
+        <div class="auth-logo-wrap">
+          <img src="assets/logo.png" alt="Logo" class="auth-logo" onerror="this.style.display='none'">
+        </div>
+        <h2><i class="fas fa-user-plus"></i> Create Account</h2>
+        <p class="auth-subtitle">Register a new account</p>
+        <div class="input-field">
+          <i class="fas fa-user"></i>
+          <input type="text" id="regUsername" placeholder="Username (min 4 chars)" required>
+        </div>
+        <div class="input-field">
+          <i class="fas fa-lock"></i>
+          <input type="password" id="regPassword" placeholder="4-Digit PIN" maxlength="4" inputmode="numeric" pattern="\d{4}" required>
+        </div>
+        <button class="btn btn-primary btn-block" id="registerBtn" onclick="handleRegister()">
+          <span>Register</span>
+          <i class="fas fa-check"></i>
+        </button>
+        <div class="auth-links">
+          <a href="#" onclick="showLogin(); return false;">Back to Login</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== WELCOME SCREEN ==================== -->
+  <div id="welcomeScreen" class="welcome-screen hidden">
+    <div class="welcome-content">
+      <img src="assets/logo.png" alt="Logo" class="welcome-logo" onerror="this.style.display='none'">
+      <h1>Afrigyei Testing Station</h1>
+      <p>Vehicle Inspection Management System</p>
+      <div class="welcome-loader">
+        <div class="loader-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN APP ==================== -->
+  <div id="appContainer" class="app-container hidden">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <img src="assets/logo.png" alt="Logo" class="sidebar-logo" onerror="this.style.display='none'">
+        <h3>Acl.</h3>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-section="dashboard" onclick="switchSection('dashboard')">
+          <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-section="addRecord" onclick="switchSection('addRecord')">
+          <i class="fas fa-plus-circle"></i><span>Add Record</span>
+        </a>
+        <a href="#" class="nav-item" data-section="records" onclick="switchSection('records')">
+          <i class="fas fa-table"></i><span>Records</span>
+        </a>
+        <a href="#" class="nav-item" data-section="editRecord" onclick="switchSection('editRecord')">
+          <i class="fas fa-pen-to-square"></i><span>Edit Record</span>
+        </a>
+        <a href="#" class="nav-item" data-section="reminders" onclick="switchSection('reminders')">
+          <i class="fas fa-bell"></i><span>Reminders</span>
+        </a>
+        <a href="#" class="nav-item" data-section="export" onclick="switchSection('export')">
+          <i class="fas fa-file-export"></i><span>Export</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-badge">
+          <i class="fas fa-user-circle"></i>
+          <span id="sidebarUser">User</span>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="handleLogout()">
+          <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <button class="menu-toggle" onclick="toggleSidebar()">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h2 id="pageTitle">Dashboard</h2>
+        <div class="topbar-right">
+          <span id="topbarUser" class="user-display">
+            <i class="fas fa-user-circle"></i> <span id="topbarUsername">User</span>
+          </span>
+        </div>
+      </header>
+
+      <!-- Dashboard Section -->
+      <section id="section-dashboard" class="content-section active">
+        <div class="stats-grid">
+          <div class="stat-card stat-blue">
+            <div class="stat-icon"><i class="fas fa-car"></i></div>
+            <div class="stat-info">
+              <h3 id="statActive">0</h3>
+              <p>Active Records</p>
+            </div>
+          </div>
+          <div class="stat-card stat-green">
+            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-info">
+              <h3 id="statCleared">0</h3>
+              <p>Cleared Records</p>
+            </div>
+          </div>
+          <div class="stat-card stat-red">
+            <div class="stat-icon"><i class="fas fa-trash"></i></div>
+            <div class="stat-info">
+              <h3 id="statDeleted">0</h3>
+              <p>Deleted Records</p>
+            </div>
+          </div>
+          <div class="stat-card stat-orange">
+            <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="stat-info">
+              <h3 id="statExpiring">0</h3>
+              <p>Expiring Soon</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-clock"></i> Recent Records</h3>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table" id="recentTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Customer</th>
+                    <th>Vehicle</th>
+                    <th>Number</th>
+                    <th>Expiry</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Add Record Section -->
+      <section id="section-addRecord" class="content-section">
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-plus-circle"></i> Add New Vehicle Record</h3>
+          </div>
+          <div class="card-body">
+            <form id="addRecordForm" class="record-form" onsubmit="handleAddRecord(event)">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="customerName"><i class="fas fa-user"></i> Customer Name</label>
+                  <input type="text" id="customerName" placeholder="Enter customer name" required>
+                </div>
+                <div class="form-group">
+                  <label for="vehicleName"><i class="fas fa-car"></i> Vehicle Name</label>
+                  <input type="text" id="vehicleName" list="vehicleNames" placeholder="e.g. Toyota Corolla" required>
+                  <datalist id="vehicleNames"></datalist>
+                </div>
+                <div class="form-group">
+                  <label for="vehicleNumber"><i class="fas fa-hashtag"></i> Vehicle Number</label>
+                  <input type="text" id="vehicleNumber" placeholder="Enter vehicle number" required>
+                </div>
+                <div class="form-group">
+                  <label for="telephoneNumber"><i class="fas fa-phone"></i> Telephone</label>
+                  <div class="phone-input-wrap">
+                    <span class="phone-prefix">+233</span>
+                    <input type="tel" id="telephoneNumber" placeholder="Enter 9-digit number" maxlength="13" required>
+                  </div>
+                  <small class="phone-error hidden" id="phoneError">Enter a valid 9-digit number</small>
+                </div>
+                <div class="form-group">
+                  <label for="chassisNumber"><i class="fas fa-barcode"></i> Chassis Number</label>
+                  <input type="text" id="chassisNumber" placeholder="Enter chassis number" required>
+                </div>
+                <div class="form-group">
+                  <label for="pc"><i class="fas fa-tag"></i> P/C</label>
+                  <input type="text" id="pc" placeholder="Enter P/C" required>
+                </div>
+                <div class="form-group">
+                  <label for="expiryDate"><i class="fas fa-calendar"></i> Expiry Date</label>
+                  <input type="date" id="expiryDate" required>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-save"></i> <span id="formSubmitText">Save Record</span>
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                  <i class="fas fa-times"></i> Clear
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- Records Section -->
+      <section id="section-records" class="content-section">
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-table"></i> Vehicle Records</h3>
+            <div class="card-actions">
+              <button class="btn btn-sm btn-secondary" onclick="confirmClearTable()">
+                <i class="fas fa-broom"></i> Clear
+              </button>
+              <button class="btn btn-sm btn-secondary" onclick="retrieveRecords()">
+                <i class="fas fa-undo"></i> Retrieve
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="filters-bar">
+              <div class="filter-group">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search vehicle number..." oninput="loadRecords()">
+              </div>
+              <div class="filter-group">
+                <select id="statusFilter" onchange="loadRecords()">
+                  <option value="active">Active</option>
+                  <option value="cleared">Cleared</option>
+                  <option value="deleted">Deleted</option>
+                  <option value="all">All</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <select id="monthFilter" onchange="loadRecords()">
+                  <option value="all">All Months</option>
+                  <option value="1">January</option>
+                  <option value="2">February</option>
+                  <option value="3">March</option>
+                  <option value="4">April</option>
+                  <option value="5">May</option>
+                  <option value="6">June</option>
+                  <option value="7">July</option>
+                  <option value="8">August</option>
+                  <option value="9">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" id="vehicleTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Customer Name</th>
+                    <th>Vehicle Name</th>
+                    <th>Vehicle Number</th>
+                    <th>Telephone</th>
+                    <th>Chassis Number</th>
+                    <th>P/C</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                    <th>Created By</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div id="noRecords" class="empty-state hidden">
+              <i class="fas fa-inbox"></i>
+              <p>No records found</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Edit Record Section -->
+      <section id="section-editRecord" class="content-section">
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-pen-to-square"></i> Edit Record</h3>
+          </div>
+          <div class="card-body">
+            <!-- Search for record to edit -->
+            <div class="filters-bar">
+              <div class="filter-group">
+                <i class="fas fa-search"></i>
+                <input type="text" id="editSearchInput" placeholder="Search by vehicle number..." oninput="searchEditRecords()">
+              </div>
+              <div class="filter-group">
+                <select id="editStatusFilter" onchange="searchEditRecords()">
+                  <option value="active">Active</option>
+                  <option value="cleared">Cleared</option>
+                  <option value="deleted">Deleted</option>
+                  <option value="all">All</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Results table -->
+            <div class="table-responsive" id="editSearchResults">
+              <table class="data-table" id="editRecordsTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Customer</th>
+                    <th>Vehicle</th>
+                    <th>Number</th>
+                    <th>Expiry</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div id="noEditRecords" class="empty-state hidden">
+              <i class="fas fa-search"></i>
+              <p>Search for a record to edit</p>
+            </div>
+
+            <!-- Edit form (hidden until a record is selected) -->
+            <div id="editFormWrapper" class="edit-form-wrapper hidden">
+              <div class="edit-form-header">
+                <h4><i class="fas fa-edit"></i> Editing: <span id="editingVehicleLabel"></span></h4>
+                <button class="btn btn-sm btn-secondary" onclick="cancelEdit()">
+                  <i class="fas fa-times"></i> Cancel
+                </button>
+              </div>
+              <form id="editRecordForm" class="record-form" onsubmit="handleEditRecord(event)">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="editCustomerName"><i class="fas fa-user"></i> Customer Name</label>
+                    <input type="text" id="editCustomerName" placeholder="Enter customer name" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="editVehicleName"><i class="fas fa-car"></i> Vehicle Name</label>
+                    <input type="text" id="editVehicleName" list="editVehicleNames" placeholder="e.g. Toyota Corolla" required>
+                    <datalist id="editVehicleNames"></datalist>
+                  </div>
+                  <div class="form-group">
+                    <label for="editVehicleNumber"><i class="fas fa-hashtag"></i> Vehicle Number</label>
+                    <input type="text" id="editVehicleNumber" placeholder="Enter vehicle number" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="editTelephoneNumber"><i class="fas fa-phone"></i> Telephone</label>
+                    <div class="phone-input-wrap">
+                      <span class="phone-prefix">+233</span>
+                      <input type="tel" id="editTelephoneNumber" placeholder="Enter 9-digit number" maxlength="13" required>
+                    </div>
+                    <small class="phone-error hidden" id="editPhoneError">Enter a valid 9-digit number</small>
+                  </div>
+                  <div class="form-group">
+                    <label for="editChassisNumber"><i class="fas fa-barcode"></i> Chassis Number</label>
+                    <input type="text" id="editChassisNumber" placeholder="Enter chassis number" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="editPc"><i class="fas fa-tag"></i> P/C</label>
+                    <input type="text" id="editPc" placeholder="Enter P/C" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="editExpiryDate"><i class="fas fa-calendar"></i> Expiry Date</label>
+                    <input type="date" id="editExpiryDate" required>
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary" id="editSubmitBtn">
+                    <i class="fas fa-save"></i> <span>Update Record</span>
+                  </button>
+                  <button type="button" class="btn btn-secondary" onclick="cancelEdit()">
+                    <i class="fas fa-times"></i> Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Reminders Section -->
+      <section id="section-reminders" class="content-section">
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-bell"></i> Expiry Reminders</h3>
+            <p class="card-subtitle">Vehicles expiring within the next 7 days</p>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table" id="reminderTable">
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Vehicle Number</th>
+                    <th>Telephone</th>
+                    <th>Expiry Date</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div id="noReminders" class="empty-state hidden">
+              <i class="fas fa-check-circle"></i>
+              <p>No vehicles expiring in the next 7 days</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Export Section -->
+      <section id="section-export" class="content-section">
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-file-export"></i> Export Records</h3>
+          </div>
+          <div class="card-body">
+            <form id="exportForm" class="export-form">
+              <h4>Select Columns</h4>
+              <div class="checkbox-grid">
+                <label class="checkbox-item"><input type="checkbox" name="columns" value="customerName" checked> Customer Name</label>
+                <label class="checkbox-item"><input type="checkbox" name="columns" value="vehicleName" checked> Vehicle Name</label>
+                <label class="checkbox-item"><input type="checkbox" name="columns" value="vehicleNumber" checked> Vehicle Number</label>
+                <label class="checkbox-item"><input type="checkbox" name="columns" value="telephoneNumber" checked> Telephone</label>
+                <label class="checkbox-item"><input type="checkbox" name="columns" value="chassisNumber" checked> Chassis Number</label>
+                <label class="checkbox-item"><input type="checkbox" name="columns" value="pc" checked> P/C</label>
+                <label class="checkbox-item"><input type="checkbox" name="columns" value="expiryDate" checked> Expiry Date</label>
+                <label class="checkbox-item"><input type="checkbox" name="columns" value="status" checked> Status</label>
+                <label class="checkbox-item"><input type="checkbox" name="columns" value="createdBy" checked> Created By</label>
+              </div>
+              <h4>Export Format</h4>
+              <div class="radio-group">
+                <label class="radio-item">
+                  <input type="radio" name="exportType" value="pdf" checked>
+                  <i class="fas fa-file-pdf"></i> PDF
+                </label>
+                <label class="radio-item">
+                  <input type="radio" name="exportType" value="excel">
+                  <i class="fas fa-file-excel"></i> Excel
+                </label>
+              </div>
+              <label class="checkbox-item mt-1">
+                <input type="checkbox" id="exportFiltered" checked> Export only filtered records
+              </label>
+              <div class="form-actions">
+                <button type="button" class="btn btn-primary" onclick="exportRecords()">
+                  <i class="fas fa-download"></i> Export
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Confirm Dialog -->
+  <div id="confirmDialog" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 id="confirmTitle">Confirm Action</h3>
+      <p id="confirmMessage">Are you sure?</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeConfirm()">Cancel</button>
+        <button class="btn btn-danger" id="confirmBtn" onclick="confirmAction()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompt Dialog -->
+  <div id="promptDialog" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 id="promptTitle">Input Required</h3>
+      <p id="promptMessage">Please enter a value:</p>
+      <input type="text" id="promptInput" class="modal-input">
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closePrompt()">Cancel</button>
+        <button class="btn btn-primary" id="promptBtn" onclick="submitPrompt()">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
