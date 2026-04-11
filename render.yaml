@@ -2,8 +2,8 @@ services:
   - type: web
     name: afrigyei-testing-station
     runtime: node
-    buildCommand: cd server && npm install
-    startCommand: cd server && node server.js
+    buildCommand: npm run build
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
