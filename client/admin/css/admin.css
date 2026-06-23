@@ -908,6 +908,78 @@ body {
 }
 
 /* ============================================
+   ADMIN EXPORT FORM
+   ============================================ */
+.admin-export-form h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dark);
+  margin-bottom: 4px;
+  margin-top: 16px;
+}
+
+.admin-export-form h4:first-child {
+  margin-top: 0;
+}
+
+.admin-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 12px 0 24px;
+}
+
+.admin-checkbox-item,
+.admin-radio-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--light);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 13px;
+}
+
+.admin-checkbox-item:hover,
+.admin-radio-item:hover {
+  border-color: var(--primary);
+  background: rgba(99,102,241,0.04);
+}
+
+.admin-checkbox-item input,
+.admin-radio-item input {
+  accent-color: var(--primary);
+}
+
+.admin-radio-group {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0 20px;
+  flex-wrap: wrap;
+}
+
+.admin-radio-item i {
+  font-size: 16px;
+}
+
+.admin-export-filter {
+  margin: 12px 0 20px;
+}
+
+.admin-export-filter .admin-select {
+  min-width: 200px;
+}
+
+.admin-form-actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+}
+
+/* ============================================
    ADMIN MODAL
    ============================================ */
 .admin-modal-overlay {

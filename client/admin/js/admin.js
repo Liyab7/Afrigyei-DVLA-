@@ -136,7 +136,9 @@ function switchAdminSection(section) {
     overview: 'Overview',
     pending: 'Pending User Approvals',
     users: 'All Users',
-    expiring: 'Expiring Licenses'
+    expiring: 'Expiring Licenses',
+    activity: 'Activity Summary',
+    export: 'Export Records'
   };
   document.getElementById('adminPageTitle').textContent = titles[section] || 'Overview';
 
@@ -144,6 +146,8 @@ function switchAdminSection(section) {
   if (section === 'pending') loadPendingUsers();
   if (section === 'users') loadAllUsers();
   if (section === 'expiring') loadExpiringRecords();
+  if (section === 'activity') loadActivity();
+  if (section === 'export') loadExportSection();
 
   document.getElementById('adminSidebar').classList.remove('open');
   return false;
@@ -383,6 +387,38 @@ async function loadExpiringRecords() {
   }
 }
 
+function adminExportExpiringToCSV() {
+  const table = document.getElementById('expiringTable');
+  const rows = table.querySelectorAll('tbody tr');
+  if (rows.length === 0) {
+    showAdminToast('No records to export', 'error');
+    return;
+  }
+  const headers = ['Customer', 'Vehicle', 'Vehicle No.', 'Telephone', 'Expiry Date', 'Days Left'];
+  const csvRows = [headers.join(',')];
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    const rowData = [
+      '"' + cells[1].textContent.replace(/"/g, '""') + '"',
+      '"' + cells[2].textContent.replace(/"/g, '""') + '"',
+      '"' + cells[3].textContent.replace(/"/g, '""') + '"',
+      '"' + cells[4].textContent.replace(/"/g, '""') + '"',
+      '"' + cells[5].textContent.replace(/"/g, '""') + '"',
+      '"' + cells[6].textContent.replace(/"/g, '""') + '"'
+    ];
+    csvRows.push(rowData.join(','));
+  });
+  const csvContent = csvRows.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'expiring_licenses_' + new Date().toISOString().slice(0, 10) + '.csv';
+  link.click();
+  URL.revokeObjectURL(url);
+  showAdminToast('Expiring licenses exported to CSV', 'success');
+}
+
 function sendWhatsAppReminder(phone, customer, vehicle, expiry) {
   const cleanPhone = phone.replace('+', '');
   const message = `Dear ${customer}, this is a reminder from *Afrigyei Testing Station (AWOSHIE DVLA)*.
@@ -396,6 +432,199 @@ Thank you for choosing Afrigyei Testing Station.`;
   const encoded = encodeURIComponent(message);
   window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
   showAdminToast(`WhatsApp reminder opened for ${customer}`, 'success');
+}
+
+// ============================================
+// EXPORT RECORDS
+// ============================================
+async function loadExportSection() {
+  try {
+    const users = await adminApiCall('/admin/users');
+    const select = document.getElementById('adminExportUserFilter');
+    const currentVal = select.value;
+    select.innerHTML = '<option value="all">All Users</option>';
+    users.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.username;
+      opt.textContent = u.username;
+      select.appendChild(opt);
+    });
+    select.value = currentVal || 'all';
+  } catch (err) {
+    showAdminToast('Error loading users for export', 'error');
+  }
+}
+
+async function adminExportRecords() {
+  const form = document.getElementById('adminExportForm');
+  const selectedColumns = Array.from(form.querySelectorAll('input[name="columns"]:checked')).map(i => i.value);
+  const exportType = form.querySelector('input[name="exportType"]:checked').value;
+  const userFilter = document.getElementById('adminExportUserFilter').value;
+  const periodFilter = document.getElementById('adminExportPeriod').value;
+
+  if (selectedColumns.length === 0) {
+    showAdminToast('Select at least one column', 'error');
+    return;
+  }
+
+  try {
+    let endpoint = '/admin/records?status=all';
+    if (userFilter !== 'all') {
+      endpoint += `&user=${encodeURIComponent(userFilter)}`;
+    }
+    const records = await adminApiCall(endpoint);
+    const filteredRecords = adminFilterRecordsByPeriod(records, periodFilter);
+
+    if (filteredRecords.length === 0) {
+      showAdminToast('No records to export', 'warning');
+      return;
+    }
+
+    const columnLabels = {
+      customerName: 'Customer Name',
+      vehicleName: 'Vehicle Name',
+      vehicleNumber: 'Vehicle Number',
+      telephoneNumber: 'Telephone',
+      chassisNumber: 'Chassis Number',
+      pc: 'P/C',
+      expiryDate: 'Expiry Date',
+      status: 'Status',
+      createdBy: 'Created By'
+    };
+
+    const headers = selectedColumns.map(c => columnLabels[c] || c);
+
+    if (exportType === 'pdf') {
+      adminGeneratePDF(filteredRecords, selectedColumns, headers);
+    } else {
+      adminGenerateExcel(filteredRecords, selectedColumns, headers);
+    }
+    showAdminToast('Export successful!', 'success');
+  } catch (err) {
+    console.error('Export error:', err);
+    showAdminToast('Export failed: ' + err.message, 'error');
+  }
+}
+
+function adminFilterRecordsByPeriod(records, period) {
+  if (!period || period === 'all') return records;
+
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+
+  let start = new Date();
+  start.setHours(0, 0, 0, 0);
+
+  if (period === 'weekly') {
+    start.setDate(start.getDate() - 6);
+  } else if (period === 'monthly') {
+    start = new Date(start.getFullYear(), start.getMonth(), 1);
+  }
+
+  return records.filter(record => {
+    if (!record.createdAt) return false;
+    const created = new Date(record.createdAt);
+    return created >= start && created <= end;
+  });
+}
+
+function adminGeneratePDF(data, columns, headers) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFontSize(16);
+  doc.text('Afrigyei Testing Station - Vehicle Inspection Report', 14, 20);
+  doc.setFontSize(12);
+  doc.text(`Admin: ${adminUser || 'Unknown'}`, 14, 28);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 36);
+  doc.text(`Total Records: ${data.length}`, 14, 44);
+
+  const tableData = data.map((r, i) => [i + 1, ...columns.map(c => r[c] || '')]);
+
+  doc.autoTable({
+    head: [['S.No', ...headers]],
+    body: tableData,
+    startY: 52,
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [30, 41, 59] }
+  });
+
+  doc.save(`admin_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+function adminGenerateExcel(data, columns, headers) {
+  const wb = XLSX.utils.book_new();
+  const excelData = data.map((r, i) => {
+    const row = { 'S.No': i + 1 };
+    columns.forEach((c, j) => { row[headers[j]] = r[c] || ''; });
+    return row;
+  });
+
+  const ws = XLSX.utils.json_to_sheet(excelData);
+  XLSX.utils.book_append_sheet(wb, ws, 'Vehicle Records');
+  XLSX.writeFile(wb, `admin_report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+// ============================================
+// ACTIVITY SUMMARY
+// ============================================
+async function loadActivity() {
+  try {
+    const data = await adminApiCall('/admin/activity');
+
+    // Per-user table
+    const perUserTbody = document.querySelector('#activityPerUserTable tbody');
+    const noUsers = document.getElementById('noActivityUsers');
+    perUserTbody.innerHTML = '';
+
+    if (data.perUser.length === 0) {
+      noUsers.classList.remove('hidden');
+      document.querySelector('#activityPerUserTable').closest('.admin-table-responsive').classList.add('hidden');
+    } else {
+      noUsers.classList.add('hidden');
+      document.querySelector('#activityPerUserTable').closest('.admin-table-responsive').classList.remove('hidden');
+      data.perUser.forEach((u, i) => {
+        const row = document.createElement('tr');
+        row.style.animationDelay = `${i * 0.04}s`;
+        row.innerHTML = `
+          <td>${i + 1}</td>
+          <td><strong>${escapeAdminHtml(u._id)}</strong></td>
+          <td>${u.total}</td>
+          <td>${u.active}</td>
+        `;
+        perUserTbody.appendChild(row);
+      });
+    }
+
+    // Recent activity table
+    const recentTbody = document.querySelector('#recentActivityTable tbody');
+    const noRecent = document.getElementById('noRecentActivity');
+    recentTbody.innerHTML = '';
+
+    if (data.recent.length === 0) {
+      noRecent.classList.remove('hidden');
+      document.querySelector('#recentActivityTable').closest('.admin-table-responsive').classList.add('hidden');
+    } else {
+      noRecent.classList.add('hidden');
+      document.querySelector('#recentActivityTable').closest('.admin-table-responsive').classList.remove('hidden');
+      data.recent.forEach((r, i) => {
+        const row = document.createElement('tr');
+        row.style.animationDelay = `${i * 0.03}s`;
+        row.innerHTML = `
+          <td>${i + 1}</td>
+          <td><strong>${escapeAdminHtml(r.createdBy)}</strong></td>
+          <td>${escapeAdminHtml(r.customerName)}</td>
+          <td>${escapeAdminHtml(r.vehicleName)}</td>
+          <td>${escapeAdminHtml(r.vehicleNumber)}</td>
+          <td><span class="admin-status-badge ${r.status === 'active' ? 'admin-status-approved' : 'admin-status-pending'}">${r.status}</span></td>
+          <td>${formatDate(r.createdAt)}</td>
+        `;
+        recentTbody.appendChild(row);
+      });
+    }
+  } catch (err) {
+    showAdminToast('Error loading activity summary', 'error');
+  }
 }
 
 // ============================================

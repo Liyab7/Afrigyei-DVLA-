@@ -7,6 +7,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="css/admin.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -62,6 +65,12 @@
         </a>
         <a href="#" class="admin-nav-item" data-section="expiring" onclick="switchAdminSection('expiring')">
           <i class="fas fa-bell"></i><span>Expiring Licenses</span>
+        </a>
+        <a href="#" class="admin-nav-item" data-section="activity" onclick="switchAdminSection('activity')">
+          <i class="fas fa-clipboard-list"></i><span>Activity Summary</span>
+        </a>
+        <a href="#" class="admin-nav-item" data-section="export" onclick="switchAdminSection('export')">
+          <i class="fas fa-file-export"></i><span>Export Records</span>
         </a>
       </nav>
       <div class="admin-sidebar-footer">
@@ -254,6 +263,122 @@
               <i class="fas fa-check-circle"></i>
               <p>No licenses expiring in this period</p>
             </div>
+            <div style="margin-top: 1rem; text-align: right;">
+              <button class="admin-btn admin-btn-primary admin-btn-sm" onclick="adminExportExpiringToCSV()">
+                <i class="fas fa-file-csv"></i> Export to CSV
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Activity Summary Section -->
+      <section id="admin-section-activity" class="admin-content-section">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3><i class="fas fa-chart-bar"></i> Records Per User</h3>
+          </div>
+          <div class="admin-card-body">
+            <div class="admin-table-responsive">
+              <table class="admin-data-table" id="activityPerUserTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>User</th>
+                    <th>Total Records</th>
+                    <th>Active Records</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div id="noActivityUsers" class="admin-empty-state hidden">
+              <i class="fas fa-clipboard-list"></i>
+              <p>No records created yet</p>
+            </div>
+          </div>
+        </div>
+        <div class="admin-card" style="margin-top:1.5rem;">
+          <div class="admin-card-header">
+            <h3><i class="fas fa-clock-rotate-left"></i> Recent Activity</h3>
+          </div>
+          <div class="admin-card-body">
+            <div class="admin-table-responsive">
+              <table class="admin-data-table" id="recentActivityTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>User</th>
+                    <th>Customer</th>
+                    <th>Vehicle</th>
+                    <th>Vehicle No.</th>
+                    <th>Status</th>
+                    <th>Date Added</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div id="noRecentActivity" class="admin-empty-state hidden">
+              <i class="fas fa-clock-rotate-left"></i>
+              <p>No recent activity</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Export Section -->
+      <section id="admin-section-export" class="admin-content-section">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3><i class="fas fa-file-export"></i> Export Records</h3>
+          </div>
+          <div class="admin-card-body">
+            <form id="adminExportForm" class="admin-export-form">
+              <h4>Select Columns</h4>
+              <div class="admin-checkbox-grid">
+                <label class="admin-checkbox-item"><input type="checkbox" name="columns" value="customerName" checked> Customer Name</label>
+                <label class="admin-checkbox-item"><input type="checkbox" name="columns" value="vehicleName" checked> Vehicle Name</label>
+                <label class="admin-checkbox-item"><input type="checkbox" name="columns" value="vehicleNumber" checked> Vehicle Number</label>
+                <label class="admin-checkbox-item"><input type="checkbox" name="columns" value="telephoneNumber" checked> Telephone</label>
+                <label class="admin-checkbox-item"><input type="checkbox" name="columns" value="chassisNumber" checked> Chassis Number</label>
+                <label class="admin-checkbox-item"><input type="checkbox" name="columns" value="pc" checked> P/C</label>
+                <label class="admin-checkbox-item"><input type="checkbox" name="columns" value="expiryDate" checked> Expiry Date</label>
+                <label class="admin-checkbox-item"><input type="checkbox" name="columns" value="status" checked> Status</label>
+                <label class="admin-checkbox-item"><input type="checkbox" name="columns" value="createdBy" checked> Created By</label>
+              </div>
+              <h4>Export Format</h4>
+              <div class="admin-radio-group">
+                <label class="admin-radio-item">
+                  <input type="radio" name="exportType" value="pdf" checked>
+                  <i class="fas fa-file-pdf"></i> PDF
+                </label>
+                <label class="admin-radio-item">
+                  <input type="radio" name="exportType" value="excel">
+                  <i class="fas fa-file-excel"></i> Excel
+                </label>
+              </div>
+              <h4>Filter by User</h4>
+              <div class="admin-export-filter">
+                <select id="adminExportUserFilter" class="admin-select">
+                  <option value="all">All Users</option>
+                </select>
+              </div>
+              <h4>Filter by Period</h4>
+              <div class="admin-export-filter">
+                <select id="adminExportPeriod" class="admin-select">
+                  <option value="all">All time</option>
+                  <option value="daily">Today</option>
+                  <option value="weekly">Last 7 days</option>
+                  <option value="monthly">This month</option>
+                </select>
+              </div>
+              <div class="admin-form-actions">
+                <button type="button" class="admin-btn admin-btn-primary" onclick="adminExportRecords()">
+                  <i class="fas fa-download"></i> Export
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </section>

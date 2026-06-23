@@ -625,6 +625,18 @@
             margin-right: 8px;
         }
 
+        #exportModal form .export-period {
+            margin-top: 10px;
+        }
+
+        #exportModal form select {
+            width: 100%;
+            margin-top: 6px;
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
         #exportModal button {
             width: 100%;
             margin-top: 15px;
@@ -746,8 +758,18 @@
                 <br>
                 <label><input type="radio" name="exportType" value="pdf" checked> Export to PDF</label>
                 <label><input type="radio" name="exportType" value="excel"> Export to Excel</label><br>
+                <label><input type="radio" name="exportType" value="csv"> Export to CSV</label><br>
                 <br>
                 <label><input type="checkbox" id="exportFiltered" checked> Export only filtered records</label><br>
+                <div class="export-period">
+                    <label for="exportPeriod">Export period</label>
+                    <select id="exportPeriod" aria-label="Export period">
+                        <option value="all">All time</option>
+                        <option value="daily">Today</option>
+                        <option value="weekly">Last 7 days</option>
+                        <option value="monthly">This month</option>
+                    </select>
+                </div>
                 <br>
                 <button type="button" onclick="exportRecords()">Export</button>
             </form>
@@ -1354,6 +1376,7 @@
             const selectedColumns = Array.from(form.querySelectorAll('input[name="columns"]:checked')).map(input => input.value);
             const exportType = form.querySelector('input[name="exportType"]:checked').value;
             const exportFiltered = document.getElementById("exportFiltered").checked;
+            const exportPeriod = document.getElementById("exportPeriod").value;
 
             if (selectedColumns.length === 0) {
                 alert("Please select at least one column to export.");
@@ -1361,10 +1384,12 @@
             }
 
             // Get records (filtered or all)
+            checkAndClearDaily();
             let records = exportFiltered ? getFilteredRecords() : mockServer.records;
+            records = filterRecordsByPeriod(records, exportPeriod);
 
             if (records.length === 0) {
-                alert("No records available to export.");
+                alert("No records available for the selected period.");
                 closeExportModal();
                 return;
             }
@@ -1381,8 +1406,10 @@
             try {
                 if (exportType === "pdf") {
                     generatePDF(exportData, selectedColumns);
-                } else {
+                } else if (exportType === "excel") {
                     generateExcel(exportData, selectedColumns);
+                } else {
+                    generateCSV(exportData, selectedColumns);
                 }
                 alert("Export successful!");
                 closeExportModal();
@@ -1394,23 +1421,52 @@
 
         // Get currently filtered records (based on table content)
         function getFilteredRecords() {
-            const table = document.getElementById("vehicleTable").getElementsByTagName("tbody")[0];
-            const records = [];
-            Array.from(table.rows).forEach(row => {
-                const record = {
-                    customerName: row.cells[1].textContent,
-                    vehicleName: row.cells[2].textContent,
-                    vehicleNumber: row.cells[3].textContent,
-                    telephoneNumber: row.cells[4].textContent,
-                    chassisNumber: row.cells[5].textContent,
-                    pc: row.cells[6].textContent,
-                    expiryDate: row.cells[7].textContent,
-                    status: row.cells[8].textContent,
-                    createdBy: row.cells[9].textContent
-                };
-                records.push(record);
+            const searchTerm = sanitizeInput(document.getElementById("searchInput").value.toLowerCase());
+            const statusFilter = document.getElementById("statusFilter").value;
+            const monthFilter = document.getElementById("monthFilter").value;
+
+            let filteredRecords = mockServer.records;
+
+            if (statusFilter === 'active') {
+                filteredRecords = filteredRecords.filter(record => record.status === 'active');
+            } else if (statusFilter !== 'all') {
+                filteredRecords = filteredRecords.filter(record => record.status === statusFilter);
+            }
+
+            filteredRecords = filteredRecords.filter(record => {
+                return record.vehicleNumber.toLowerCase().includes(searchTerm);
             });
-            return records;
+
+            if (monthFilter !== 'all') {
+                filteredRecords = filteredRecords.filter(record => {
+                    const expiryMonth = new Date(record.expiryDate).getMonth() + 1;
+                    return expiryMonth === parseInt(monthFilter);
+                });
+            }
+
+            return filteredRecords;
+        }
+
+        function filterRecordsByPeriod(records, period) {
+            if (period === 'all') return records;
+
+            const end = new Date();
+            end.setHours(23, 59, 59, 999);
+
+            let start = new Date();
+            start.setHours(0, 0, 0, 0);
+
+            if (period === 'weekly') {
+                start.setDate(start.getDate() - 6);
+            } else if (period === 'monthly') {
+                start = new Date(start.getFullYear(), start.getMonth(), 1);
+            }
+
+            return records.filter(record => {
+                if (!record.createdAt) return false;
+                const created = new Date(record.createdAt);
+                return created >= start && created <= end;
+            });
         }
 
         // Generate PDF
@@ -1500,6 +1556,40 @@
             const ws = XLSX.utils.json_to_sheet(excelData);
             XLSX.utils.book_append_sheet(wb, ws, "Vehicle Records");
             XLSX.writeFile(wb, `inspection_report_${currentUser || "user"}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        }
+
+        function generateCSV(data, columns) {
+            const headers = columns.map(col => {
+                return {
+                    customerName: "Customer Name",
+                    vehicleName: "Vehicle Name",
+                    vehicleNumber: "Vehicle Number",
+                    telephoneNumber: "Telephone Number",
+                    chassisNumber: "Chassis Number",
+                    pc: "P/C",
+                    expiryDate: "Expiry Date",
+                    status: "Status",
+                    createdBy: "Created By"
+                }[col] || col;
+            });
+
+            const csvRows = [];
+            csvRows.push(['S.No', ...headers].join(','));
+
+            data.forEach((row, index) => {
+                const values = [index + 1, ...columns.map(col => row[col] || '')];
+                const escaped = values.map(value => `"${String(value).replace(/"/g, '""')}"`);
+                csvRows.push(escaped.join(','));
+            });
+
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `inspection_report_${currentUser || "user"}_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
         }
 
         function showExpiryReminders() {

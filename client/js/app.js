@@ -376,8 +376,7 @@ function switchSection(section) {
     addRecord: 'Add Record',
     records: 'Vehicle Records',
     editRecord: 'Edit Record',
-    reminders: 'Expiry Reminders',
-    export: 'Export Records'
+    reminders: 'Expiry Reminders'
   };
   document.getElementById('pageTitle').textContent = titles[section] || 'Dashboard';
 
@@ -856,36 +855,6 @@ async function loadReminders() {
   }
 }
 
-function exportRemindersToCSV() {
-  const table = document.getElementById('reminderTable');
-  const rows = table.querySelectorAll('tbody tr');
-  if (rows.length === 0) {
-    showToast('No contacts to export', 'error');
-    return;
-  }
-  const headers = ['Customer', 'Vehicle Number', 'Telephone', 'Expiry Date'];
-  const csvRows = [headers.join(',')];
-  rows.forEach(row => {
-    const cells = row.querySelectorAll('td');
-    const rowData = [
-      '"' + cells[0].textContent.replace(/"/g, '""') + '"',
-      '"' + cells[1].textContent.replace(/"/g, '""') + '"',
-      '"' + cells[2].textContent.replace(/"/g, '""') + '"',
-      '"' + cells[3].textContent.replace(/"/g, '""') + '"'
-    ];
-    csvRows.push(rowData.join(','));
-  });
-  const csvContent = csvRows.join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'expiry_reminders_' + new Date().toISOString().slice(0, 10) + '.csv';
-  link.click();
-  URL.revokeObjectURL(url);
-  showToast('Contacts exported to CSV', 'success');
-}
-
 function sendReminder(phone, customer, vehicle, expiry) {
   const cleanPhone = phone.replace('+', '');
   const message = `Dear ${customer}, this is a reminder from *Afrigyei Testing Station (AWOSHIE DVLA)*.
@@ -899,100 +868,6 @@ Thank you for choosing Afrigyei Testing Station.`;
   const encoded = encodeURIComponent(message);
   window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
   showToast(`WhatsApp reminder opened for ${customer}`, 'success');
-}
-
-// ============================================
-// EXPORT
-// ============================================
-async function exportRecords() {
-  const form = document.getElementById('exportForm');
-  const selectedColumns = Array.from(form.querySelectorAll('input[name="columns"]:checked')).map(i => i.value);
-  const exportType = form.querySelector('input[name="exportType"]:checked').value;
-  const exportFiltered = document.getElementById('exportFiltered').checked;
-
-  if (selectedColumns.length === 0) {
-    showToast('Select at least one column', 'error');
-    return;
-  }
-
-  let records;
-  if (exportFiltered && currentRecords.length > 0) {
-    records = currentRecords;
-  } else {
-    try {
-      records = await apiCall('/records?status=all');
-    } catch (err) {
-      showToast('Error fetching records for export', 'error');
-      return;
-    }
-  }
-
-  if (records.length === 0) {
-    showToast('No records to export', 'warning');
-    return;
-  }
-
-  const columnLabels = {
-    customerName: 'Customer Name',
-    vehicleName: 'Vehicle Name',
-    vehicleNumber: 'Vehicle Number',
-    telephoneNumber: 'Telephone',
-    chassisNumber: 'Chassis Number',
-    pc: 'P/C',
-    expiryDate: 'Expiry Date',
-    status: 'Status',
-    createdBy: 'Created By'
-  };
-
-  const headers = selectedColumns.map(c => columnLabels[c] || c);
-
-  try {
-    if (exportType === 'pdf') {
-      generatePDF(records, selectedColumns, headers);
-    } else {
-      generateExcel(records, selectedColumns, headers);
-    }
-    showToast('Export successful!', 'success');
-  } catch (err) {
-    console.error('Export error:', err);
-    showToast('Export failed', 'error');
-  }
-}
-
-function generatePDF(data, columns, headers) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  doc.setFontSize(16);
-  doc.text('Afrigyei Testing Station - Vehicle Inspection Report', 14, 20);
-  doc.setFontSize(12);
-  doc.text(`Inspector: ${currentUser || 'Unknown'}`, 14, 28);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 36);
-
-  const tableData = data.map((r, i) => [i + 1, ...columns.map(c => r[c] || '')]);
-
-  doc.autoTable({
-    head: [['S.No', ...headers]],
-    body: tableData,
-    startY: 45,
-    styles: { fontSize: 9 },
-    headStyles: { fillColor: [30, 41, 59] }
-  });
-
-  doc.save(`report_${currentUser}_${new Date().toISOString().slice(0, 10)}.pdf`);
-}
-
-function generateExcel(data, columns, headers) {
-  const wb = XLSX.utils.book_new();
-  const excelData = data.map((r, i) => {
-    const row = { 'S.No': i + 1 };
-    columns.forEach((c, j) => { row[headers[j]] = r[c] || ''; });
-    return row;
-  });
-
-  const ws = XLSX.utils.json_to_sheet(excelData);
-  XLSX.utils.book_append_sheet(wb, ws, 'Vehicle Records');
-  XLSX.writeFile(wb, `report_${currentUser}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 // ============================================

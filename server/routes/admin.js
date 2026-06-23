@@ -163,6 +163,23 @@ router.get('/stats', adminAuth, async (req, res) => {
   }
 });
 
+// Get all records for admin export
+router.get('/records', adminAuth, async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.status && req.query.status !== 'all') {
+      filter.status = req.query.status;
+    }
+    if (req.query.user) {
+      filter.createdBy = req.query.user;
+    }
+    const records = await Record.find(filter).sort({ createdAt: -1 });
+    res.json(records);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error fetching records.' });
+  }
+});
+
 // Get expiring records for admin
 router.get('/expiring', adminAuth, async (req, res) => {
   try {
@@ -181,6 +198,26 @@ router.get('/expiring', adminAuth, async (req, res) => {
     res.json(records);
   } catch (err) {
     res.status(500).json({ message: 'Server error fetching expiring records.' });
+  }
+});
+
+// Get activity summary (records per user + recent activity)
+router.get('/activity', adminAuth, async (req, res) => {
+  try {
+    // Records count per user
+    const perUser = await Record.aggregate([
+      { $group: { _id: '$createdBy', total: { $sum: 1 }, active: { $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] } } } },
+      { $sort: { total: -1 } }
+    ]);
+
+    // Recent 30 records across all users
+    const recent = await Record.find({}, 'customerName vehicleName vehicleNumber createdBy createdAt status')
+      .sort({ createdAt: -1 })
+      .limit(30);
+
+    res.json({ perUser, recent });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error fetching activity.' });
   }
 });
 
